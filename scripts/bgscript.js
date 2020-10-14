@@ -41,7 +41,7 @@ function extractHeader(eml)
 function emlFormatDecode(text)
 {
   return text
-          .replace(/\=(\r|\n)/g,"")
+          .replace(/\=(\r\r|\n\n|\r\n|\n|\r)/g,'')
           .replace(QEncodeRegex, qDecode);
   
 }
@@ -54,8 +54,9 @@ function emlFormatDecode(text)
 function showFileContent(contents)
 {
   header   = extractHeader(contents), body = {};
-  contents = emlFormatDecode(contents).replace(/<\n/g, '<')
-            .split(contents.match(/MIME-Version: .*/)[0])[1];
+  contents = contents.split(contents.match(/MIME-Version: .*/)[0])[1];
+  console.log(encodeURIComponent(contents));
+  contents = emlFormatDecode(contents).replace(/<\n/g, '<');
   body.subject =  emlFormatDecode(header['subject'])
                   .replace(/\=\?UTF-8\?Q\?(.*?)\?\=/g, '$1');
   body.to = header['to']
