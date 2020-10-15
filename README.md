@@ -1,5 +1,5 @@
 # EML Editor
 Thunderbird WebExtension
 
-Quick & easy edit your backup eml's files
+Quick & easy edit & save your backup eml's files
 

@@ -55,7 +55,6 @@ function showFileContent(contents)
 {
   header   = extractHeader(contents), body = {};
   contents = contents.split(contents.match(/MIME-Version: .*/)[0])[1];
-  console.log(encodeURIComponent(contents));
   contents = emlFormatDecode(contents).replace(/<\n/g, '<');
   body.subject =  emlFormatDecode(header['subject'])
                   .replace(/\=\?UTF-8\?Q\?(.*?)\?\=/g, '$1');
@@ -73,18 +72,39 @@ function showFileContent(contents)
   }
   browser.compose.beginNew().then(tab => {
     browser.compose.setComposeDetails(tab.id, body);
-  });
+    });
+}
+
+/*
+*
+* Save EML File
+*
+*/
+function saveEMLFile(contents)
+{
+  var data = new Blob([contents], {type: 'text/html'}),
+      url  = window.URL.createObjectURL(data);
+    let item = {
+      filename: "file.eml",
+      saveAs: true,
+      url: url
+    };
+  browser.downloads.download(item);
 }
 
 /*
 *
 * Wait for EML file ...
-*
+* to open or to save
 */
 browser.runtime.onMessage.addListener(async message => {
+  if (message.message.save_file){
+    saveEMLFile(message.message.file_contents);
+  }
   if (message.message.open_file){
     let input = document.createElement('input'), header;
     input.type = 'file';
+    input.accept = '.eml';
     input.onchange = e => {
       let file    = e.target.files[0],
           reader  = new FileReader();
@@ -99,5 +119,6 @@ browser.runtime.onMessage.addListener(async message => {
     return;
   }
 });
+
 
 //https://developer.mozilla.org/fr/docs/Mozilla/Add-ons/WebExtensions/API/downloads/download

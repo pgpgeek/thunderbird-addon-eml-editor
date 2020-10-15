@@ -2,7 +2,7 @@
     "manifest_version": 2,
     "name": "ELM-Editor",
     "description": "Open & Edit ELM File - Allow keeping X-Unsent header",
-    "version": "1.0",
+    "version": "1.1",
     "author": "dave-hill@dyrk.org",
     "applications": {
         "gecko": {
@@ -17,13 +17,13 @@
     },
     "compose_action": {
         "default_icon":  "images/internet-32px.png",
-        "default_popup": "views/popup.html",
-        "default_title": "Eml Editor"
+        "default_popup": "views/save_eml.html",
+        "default_title": "Save EML"
     },
     "background": {
         "scripts": ["scripts/bgscript.js"]
     },
-    "permissions": ["compose", "storage", "clipboardWrite"],
+    "permissions": ["compose", "downloads"],
     "icons": {
         "64": "images/internet.png",
         "32": "images/internet-32px.png",
