@@ -5,7 +5,7 @@ Cc: %cc%
 Subject: %subject%
 Content-Type: text/html; charset=UTF-8
 MIME-Version: 1.0
-  
+
 %body%`;
 
 function formatEmail(contents)

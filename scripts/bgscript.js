@@ -24,11 +24,15 @@ function qDecode(e)
 */
 function extractHeader(eml)
 {
+  eml = eml.split(/\n\n/)[0];
   reg = /([A-Z]{1}[A-Za-z\-\_]{1,20}):(.*)/g;
   obj = {}
   while ((array = reg.exec(eml)) !== null) {
     obj[array[1].toLowerCase()] = array[2].trim();
   }
+  Object.keys(obj).map( el => {
+    obj[el] = obj[el].match(/\^%[a-z]*\%$/) ? "" : obj[el];
+  });
   return obj;
 };
 
@@ -54,7 +58,9 @@ function emlFormatDecode(text)
 function showFileContent(contents)
 {
   header   = extractHeader(contents), body = {};
-  contents = contents.split(contents.match(/MIME-Version: .*/)[0])[1];
+  contents = contents.split(/\n\n/);
+  contents.shift();
+  contents = contents.join("\n\n");
   contents = emlFormatDecode(contents).replace(/<\n/g, '<');
   body.subject =  emlFormatDecode(header['subject'])
                   .replace(/\=\?UTF-8\?Q\?(.*?)\?\=/g, '$1');
