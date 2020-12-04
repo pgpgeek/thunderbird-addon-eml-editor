@@ -16,7 +16,18 @@ class ComposeManager {
       });
     });
   }
-  getTextCompose()
+  getAttachments() {
+    return new Promise((res, err) => {
+      this.getTabId().then(tabId => {
+        browser.compose.listAttachments(tabId).then(async (details) => {
+          console.log(details);
+           res(details);
+        }).catch(err);
+      });
+    });
+
+  }
+  getTextCompose(attachements)
   {
     return new Promise((res, err) => {
       this.getTabId().then(tabId => {
