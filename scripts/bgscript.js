@@ -25,10 +25,15 @@ function qDecode(e)
 function extractHeader(eml)
 {
   eml = eml.split(/\n\n/)[0];
-  reg = /([A-Z]{1}[A-Za-z\-\_]{1,20}):(.*)/g;
+  reg = /([A-Z]{1}[A-Za-z\-\_ \t]{1,20}):(.*)/g;
   obj = {}
   while ((array = reg.exec(eml)) !== null) {
-    obj[array[1].toLowerCase()] = array[2].trim();
+    obj[array[1].trim().toLowerCase()] = array[2].trim();
+  }
+  //detect filename 
+  filename = eml.match(/fIlename=(.*)/i);
+  if (filename) {
+    obj.filename = filename[1].replace(/"|'/g, '');
   }
   Object.keys(obj).map( el => {
     obj[el] = obj[el].match(/\^%[a-z]*\%$/) ? "" : obj[el];
@@ -52,12 +57,76 @@ function emlFormatDecode(text)
 
 /*
 *
+*
+* Add Attachements on email
+*
+*/
+
+function addAttachment(tabId, attachements)
+{
+  attachements.map( attachment => {
+    var file = null, bstr, n, u8arr;
+
+    try {
+      bstr = atob(attachment.body.trim()); 
+      n = bstr.length;
+      u8arr = new Uint8Array(n);
+      while(n--){
+          u8arr[n] = bstr.charCodeAt(n);
+      }
+    } catch (err) {
+      u8arr= attachment.body.trim();
+    }
+    
+    file = new File([u8arr], attachment.header.filename, {
+      type: attachment.header['content-type'],
+    });
+    browser.compose.addAttachment(tabId, {file:file});
+    // console.log(tabId, attachment)
+  });
+}
+
+/*
+*
+*
+* Extrat all parts from email (main contents, attachments, ....)
+*
+*/
+function extractMultipartContent(contents, header) {
+  let body, contentType, boundary = header['content-type'].match(/boundary=(.*)/), 
+        attachments = [],
+        bodyParts = contents.split(boundary ? '--'+boundary[1] : /zertyuhgfdfghjgfdfghgf/);
+        bodyParts.map( tmpContents  => {
+          let tmp = tmpContents.split(/\n\n/),
+              tmpHeader = extractHeader(tmp[0]);
+        if (!tmpHeader['content-type']) return null;
+          tmp.shift();
+          tmpBody = tmp.join("\n\n");
+          if (tmpHeader['content-disposition'] && 
+              tmpHeader['content-disposition'].indexOf('attachment') != -1) {
+                return attachments.push({header: tmpHeader, body: tmpBody});
+          }
+            
+            contentType = tmpHeader['content-type'];
+            body = tmpBody;
+        });
+      return {
+          attachements  : attachments,
+          body          : body,
+          contentType   : contentType
+
+      };
+}
+
+/*
+*
 * Make new Email from eml file
 *
 */
 function showFileContent(contents)
 {
-  header   = extractHeader(contents), body = {};
+  let attachments = [], tmp, body = {};
+      header   = extractHeader(contents);
   contents = contents.split(/\n\n/);
   contents.shift();
   contents = contents.join("\n\n");
@@ -65,6 +134,14 @@ function showFileContent(contents)
   body.subject =  emlFormatDecode(header['subject'])
                   .replace(/\=\?UTF-8\?Q\?(.*?)\?\=/g, '$1');
   body.to = header['to']
+  // If multipart
+  if (typeof header['content-type'] != 'undefined' &&
+             header['content-type'].match(/multipart.*?boundary/)) {
+    tmp = extractMultipartContent(contents, header);
+    contents = tmp.body;
+    header['content-type'] = tmp.contentType;
+    attachments = tmp.attachements;
+  }
   if (typeof header['content-type'] != 'undefined' &&
              header['content-type'].match(/html/))
   {
@@ -78,7 +155,9 @@ function showFileContent(contents)
   }
   browser.compose.beginNew().then(tab => {
     browser.compose.setComposeDetails(tab.id, body);
-    });
+      addAttachment(tab.id, attachments);
+
+ });
 }
 
 /*
@@ -125,6 +204,3 @@ browser.runtime.onMessage.addListener(async message => {
     return;
   }
 });
-
-
-//https://developer.mozilla.org/fr/docs/Mozilla/Add-ons/WebExtensions/API/downloads/download
