@@ -45,41 +45,47 @@ function formatEmail(contents, attachements)
 }
 
 
+async function getFileAttachementsDatas(file)
+{
+  let nfile = await file.getFile();
+  return await (function(nfile) {
+    return new Promise((res2) => {
+      reader  = new FileReader();
+      reader.addEventListener("load", function () {
+        let result = this.result,
+            fileType = result ? result.match(/data:(.*?);base64/) : null;
+        console.log('====>', result, reader);
+        res2({
+            file: nfile,
+            type : fileType ? fileType[1] : "text/html",
+            contents: !result || result.indexOf(',') == -1 ? "error": result.split(',')[1]
+          });
+      }, false);
+      reader.readAsDataURL(nfile);
+    });
+  })(nfile);
+}
+
+
 function formatAttachements(mailerCommon)
 {
   return new Promise(async (res, err) => {
     files = await mailerCommon.getAttachments();
-    files_list = files.map(async (file) => {
-      let nfile = await file.getFile();
-          return await (async (nfile) => {
-            return new Promise((res2) => {
-              reader  = new FileReader();
-              reader.addEventListener("load", function () {
-                let result = reader.result,
-                    fileType = result ? result.match(/data:(.*?);base64/) : null;
-                res2({
-                    file: nfile,
-                    type : fileType ? fileType[1] : "text/html",
-                    contents: !result || result.indexOf(',') == -1 ? "error": result.split(',')[1]
-                  });
-              }, false);
-              reader.readAsDataURL(nfile);
-            });
-          })(nfile);
-      });
-      files = await Promise.all(files_list);
-      res(files.map( file => {
-        let filename     = file.file.name,
-            filetype     = file.type,
-            binary_data  = file.contents,
-            fileContents = EMLAttachements;
+    files_list = files.map( file => getFileAttachementsDatas(file));
+    files = await Promise.all(files_list);
+    console.log(files);
+    res(files.map(file => {
+      let filename     = file.file.name,
+          filetype     = file.type,
+          binary_data  = file.contents,
+          fileContents = EMLAttachements;
 
-        fileContents  = fileContents.replace(/%filename%/,     filename);
-        fileContents  = fileContents.replace(/%filetype%/,     filetype);
-        fileContents  = fileContents.replace(/%binary_data%/,  binary_data);
-        return fileContents;
-      }).join("\n"));
-    });
+      fileContents  = fileContents.replace(/%filename%/,     filename);
+      fileContents  = fileContents.replace(/%filetype%/,     filetype);
+      fileContents  = fileContents.replace(/%binary_data%/,  binary_data);
+      return fileContents;
+    }).join("\n"));
+  });
 }
 
 
@@ -90,7 +96,6 @@ mailerCommon.getTextCompose().then(async (email) => {
       attachements = null;
   attachements = await formatAttachements(mailerCommon);
   message = message = formatEmail(email, attachements);
-  console.log(attachements);
   mailerCommon.saveEMLFile(message);
 
 });

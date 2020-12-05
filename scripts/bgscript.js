@@ -82,7 +82,6 @@ function addAttachment(tabId, attachements)
       type: attachment.header['content-type'],
     });
     browser.compose.addAttachment(tabId, {file:file});
-    // console.log(tabId, attachment)
   });
 }
 

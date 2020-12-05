@@ -20,7 +20,6 @@ class ComposeManager {
     return new Promise((res, err) => {
       this.getTabId().then(tabId => {
         browser.compose.listAttachments(tabId).then(async (details) => {
-          console.log(details);
            res(details);
         }).catch(err);
       });
