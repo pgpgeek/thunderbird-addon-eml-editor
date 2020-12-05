@@ -1,8 +1,8 @@
 {
     "manifest_version": 2,
-    "name": "ELM-Editor",
-    "description": "Open & Edit ELM File - Allow keeping X-Unsent header",
-    "version": "1.4",
+    "name": "EML-Editor",
+    "description": "Open & Edit EML File - Allow keeping X-Unsent header",
+    "version": "1.6",
     "author": "dave-hill@dyrk.org",
     "applications": {
         "gecko": {

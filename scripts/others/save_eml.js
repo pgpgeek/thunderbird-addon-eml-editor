@@ -55,7 +55,7 @@ async function getFileAttachementsDatas(file)
         let result = this.result,
             fileType = result ? result.match(/data:(.*?);base64/) : null;
         res2({
-            file: nfile,
+            filename: file.name,
             type : fileType ? fileType[1] : "text/html",
             contents: !result || result.indexOf(',') == -1 ? "error": result.split(',')[1]
           });
@@ -73,7 +73,7 @@ function formatAttachements(mailerCommon)
     files_list = files.map( file => getFileAttachementsDatas(file));
     files = await Promise.all(files_list);
     res(files.map(file => {
-      let filename     = file.file.name,
+      let filename     = file.filename,
           filetype     = file.type,
           binary_data  = file.contents,
           fileContents = EMLAttachements;
