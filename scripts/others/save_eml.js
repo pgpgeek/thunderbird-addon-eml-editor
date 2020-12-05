@@ -54,7 +54,6 @@ async function getFileAttachementsDatas(file)
       reader.addEventListener("load", function () {
         let result = this.result,
             fileType = result ? result.match(/data:(.*?);base64/) : null;
-        console.log('====>', result, reader);
         res2({
             file: nfile,
             type : fileType ? fileType[1] : "text/html",

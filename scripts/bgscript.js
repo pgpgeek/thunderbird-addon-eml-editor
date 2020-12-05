@@ -65,19 +65,25 @@ function emlFormatDecode(text)
 function addAttachment(tabId, attachements)
 {
   attachements.map( attachment => {
-    var file = null, bstr, n, u8arr;
+    var file = null, bstr, n, u8arr, tryB64 = true;
 
-    try {
-      bstr = atob(attachment.body.trim()); 
-      n = bstr.length;
-      u8arr = new Uint8Array(n);
-      while(n--){
-          u8arr[n] = bstr.charCodeAt(n);
+    bstr = attachment.body.replace(/( |\n|\t|\r)/g, '');
+    for (i=0; i<=2 && tryB64; i++) {
+      try {
+        bstr = atob(bstr); 
+        console.log("ok", bstr);
+        n = bstr.length;
+        u8arr = new Uint8Array(n);
+        while(n--){
+            u8arr[n] = bstr.charCodeAt(n);
+        }
+        tryB64 = false;
+      } catch (err) {
+        bstr += '=';
+        u8arr= bstr;
+        console.log("Failed", u8arr, err);
       }
-    } catch (err) {
-      u8arr= attachment.body.trim();
     }
-    
     file = new File([u8arr], attachment.header.filename, {
       type: attachment.header['content-type'],
     });
