@@ -71,7 +71,6 @@ function addAttachment(tabId, attachements)
     for (i=0; i<=2 && tryB64; i++) {
       try {
         bstr = atob(bstr); 
-        console.log("ok", bstr);
         n = bstr.length;
         u8arr = new Uint8Array(n);
         while(n--){
@@ -81,7 +80,6 @@ function addAttachment(tabId, attachements)
       } catch (err) {
         bstr += '=';
         u8arr= bstr;
-        console.log("Failed", u8arr, err);
       }
     }
     file = new File([u8arr], attachment.header.filename, {

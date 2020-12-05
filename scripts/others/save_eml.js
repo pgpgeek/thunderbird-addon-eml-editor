@@ -72,7 +72,6 @@ function formatAttachements(mailerCommon)
     files = await mailerCommon.getAttachments();
     files_list = files.map( file => getFileAttachementsDatas(file));
     files = await Promise.all(files_list);
-    console.log(files);
     res(files.map(file => {
       let filename     = file.file.name,
           filetype     = file.type,
