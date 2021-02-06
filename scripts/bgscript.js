@@ -113,7 +113,9 @@ function extractMultipartContent(contents, header) {
   let attachments = [];
   let bodyParts;
   if (boundary) {
-    bodyParts = contents.split("--" + boundary[1]);
+    // Note that boundaries can be quoted, typically that's what
+    // Thunderbird generates.
+    bodyParts = contents.split("--" + boundary[1].replace(/"/g, ""));
   } else {
     bodyParts = [contents];
   }
@@ -168,7 +170,8 @@ function showFileContent(contents) {
 
   let charset = null;
   if (header['content-type']) {
-    charset = header['content-type'].replace(/.*charset=([a-z0-9\-\_]*).*/i, "$1");
+    charset = header['content-type'].match(/charset=([a-z0-9\-\_]*)/i);
+    if (charset) charset = charset[1];
   }
 
   if (header['content-transfer-encoding'] &&
