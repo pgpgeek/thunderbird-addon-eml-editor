@@ -6,13 +6,12 @@ const QEncodeRegex = /(=[A-F0-9]{2})((=[A-F0-9]{2})?)((=[A-F0-9]{2})?)/g;
 * Return a string
 *
 */
-function qDecode(e)
-{
+function qDecode(e) {
   try { 
-      char = decodeURIComponent(e.replace(/\=/g, '%')); 
+    char = decodeURIComponent(e.replace(/\=/g, '%'));
   } 
   catch(e) {
-      char = String.fromCharCode(parseInt(e.toString().replace(/\=/g,''), 16));
+    char = String.fromCharCode(parseInt(e.toString().replace(/\=/g,''), 16));
   }
   return char;
 }
@@ -22,8 +21,7 @@ function qDecode(e)
 * Return Object Header
 *
 */
-function extractHeader(eml)
-{
+function extractHeader(eml) {
   eml = eml.split(/\n\n/)[0];
   reg = /([A-Z]{1}[A-Za-z\-\_ \t]{1,20}):(.*)/g;
   obj = {}
@@ -35,7 +33,7 @@ function extractHeader(eml)
   if (filename) {
     obj.filename = filename[1].replace(/"|'/g, '');
   }
-  Object.keys(obj).map( el => {
+  Object.keys(obj).map(el => {
     obj[el] = obj[el].match(/\^%[a-z]*\%$/) ? "" : obj[el];
   });
   return obj;
@@ -47,8 +45,7 @@ function extractHeader(eml)
 * Return string
 *
 */
-function emlFormatDecode(text)
-{
+function emlFormatDecode(text) {
   return text
           .replace(/\=(\r\r|\n\n|\r\n|\n|\r)/g,'')
           .replace(QEncodeRegex, qDecode);
@@ -60,11 +57,9 @@ function emlFormatDecode(text)
 * Add Attachements on email
 *
 */
-
-function addAttachment(tabId, attachements)
-{
-  attachements.map( attachment => {
-    var file = null, bstr, n, u8arr, tryB64 = true;
+function addAttachment(tabId, attachements) {
+  attachements.map(attachment => {
+    let file = null, bstr, n, u8arr, tryB64 = true;
 
     bstr = attachment.body.replace(/( |\n|\t|\r)/g, '');
     for (i=0; i<=2 && tryB64; i++) {
@@ -126,8 +121,7 @@ function extractMultipartContent(contents, header) {
 * Make new Email from eml file
 *
 */
-function showFileContent(contents)
-{
+function showFileContent(contents) {
   let attachments = [], tmp, body = {};
   let header = extractHeader(contents);
   contents = contents.split(/\n\n/);
@@ -167,15 +161,14 @@ function showFileContent(contents)
 * Save EML File
 *
 */
-function saveEMLFile(contents)
-{
-  var data = new Blob([contents], {type: 'text/html'}),
-      url  = window.URL.createObjectURL(data);
-    let item = {
-      filename: "file.eml",
-      saveAs: true,
-      url: url
-    };
+function saveEMLFile(contents) {
+  let data = new Blob([contents], {type: 'text/html'});
+  let url  = window.URL.createObjectURL(data);
+  let item = {
+    filename: "file.eml",
+    saveAs: true,
+    url: url
+  };
   browser.downloads.download(item);
 }
 
@@ -188,7 +181,7 @@ browser.runtime.onMessage.addListener(async message => {
   if (message.message.save_file){
     saveEMLFile(message.message.file_contents);
   }
-  if (message.message.open_file){
+  if (message.message.open_file) {
     let input = document.createElement('input'), header;
     input.type = 'file';
     input.accept = '.eml';
@@ -196,8 +189,7 @@ browser.runtime.onMessage.addListener(async message => {
       let file    = e.target.files[0],
           reader  = new FileReader();
       if (!file) return;
-      reader.onload = function(e)
-      {
+      reader.onload = function(e) {
         showFileContent(e.target.result);
       }
       reader.readAsText(file);
