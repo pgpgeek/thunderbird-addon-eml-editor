@@ -1,52 +1,34 @@
 class ComposeManager {
-  async getTabId()
-  {
+  async getTabId() {
     let tabs = await browser.tabs.query({
       active: true,
       currentWindow: true
     });
     return tabs[0].id;
   }
-  sendMessage(message)
-  {
-    this.getTabId().then(tabId => {
-      browser.runtime.sendMessage({
-        tabId,
-        message
-      });
-    });
-  }
-  getAttachments() {
-    return new Promise((res, err) => {
-      this.getTabId().then(tabId => {
-        browser.compose.listAttachments(tabId).then(async (details) => {
-           res(details);
-        }).catch(err);
-      });
-    });
 
+  async sendMessage(message) {
+    let tabId = await this.getTabId();
+    browser.runtime.sendMessage({ tabId, message });
   }
-  getTextCompose(attachements)
-  {
-    return new Promise((res, err) => {
-      this.getTabId().then(tabId => {
-        browser.compose.getComposeDetails(tabId).then(async (details) => {
-           res(details);
-        }).catch(err);
-      });
-    });
+
+  async getAttachments() {
+    let tabId = await this.getTabId();
+    let details = await browser.compose.listAttachments(tabId);
+    return details;
   }
-  openSelectFile()
-  {
-    let message = { open_file : true };
-    this.getTabId().then(tabId => {
-      browser.runtime.sendMessage({ tabId, message });
-    });
+
+  async getTextCompose() {
+    let tabId = await this.getTabId();
+    let details = await browser.compose.getComposeDetails(tabId);
+    return details;
   }
+
+  openSelectFile() {
+    this.sendMessage({ open_file : true });
+  }
+
   saveEMLFile(contents) {
-    let message = { save_file : true, file_contents: contents };
-    this.getTabId().then(tabId => {
-      browser.runtime.sendMessage({ tabId, message });
-    });
+    this.sendMessage({ save_file : true, file_contents: contents });
   }
 };
