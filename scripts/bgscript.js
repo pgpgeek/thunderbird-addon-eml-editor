@@ -1,20 +1,40 @@
-const QEncodeRegex = /(=[A-F0-9]{2})((=[A-F0-9]{2})?)((=[A-F0-9]{2})?)/g;
-
-/*
-* Q-Decoder -> Revert a Q encoded string 
-* like =ED=EC=A0 to real human readable string
-* Return a string
-*
-*/
-function qDecode(e) {
-  try { 
-    char = decodeURIComponent(e.replace(/\=/g, '%'));
-  } 
-  catch(e) {
-    char = String.fromCharCode(parseInt(e.toString().replace(/\=/g,''), 16));
+// Copied from jsmime.js.
+function stringToTypedArray(buffer) {
+  var typedarray = new Uint8Array(buffer.length);
+  for (var i = 0; i < buffer.length; i++) {
+    typedarray[i] = buffer.charCodeAt(i);
   }
-  return char;
+  return typedarray;
 }
+
+function quoted_printable_decode(str) { // eslint-disable-line camelcase
+  if (!str) return str;
+  //       discuss at: https://locutus.io/php/quoted_printable_decode/
+  //      original by: Ole Vrijenhoek
+  //      bugfixed by: Brett Zamir (https://brett-zamir.me)
+  //      bugfixed by: Theriault (https://github.com/Theriault)
+  // reimplemented by: Theriault (https://github.com/Theriault)
+  //      improved by: Brett Zamir (https://brett-zamir.me)
+  //        example 1: quoted_printable_decode('a=3Db=3Dc')
+  //        returns 1: 'a=b=c'
+  //        example 2: quoted_printable_decode('abc  =20\r\n123  =20\r\n')
+  //        returns 2: 'abc   \r\n123   \r\n'
+  //        example 3: quoted_printable_decode('012345678901234567890123456789012345678901234567890123456789012345678901234=\r\n56789')
+  //        returns 3: '01234567890123456789012345678901234567890123456789012345678901234567890123456789'
+  //        example 4: quoted_printable_decode("Lorem ipsum dolor sit amet=23, consectetur adipisicing elit")
+  //        returns 4: 'Lorem ipsum dolor sit amet#, consectetur adipisicing elit'
+  // Decodes all equal signs followed by two hex digits
+  const RFC2045Decode1 = /=\r?\n/gm;
+  // the RFC states against decoding lower case encodings, but following apparent PHP behavior
+  const RFC2045Decode2IN = /=([0-9A-F]{2})/gim;
+  // RFC2045Decode2IN = /=([0-9A-F]{2})/gm,
+  const RFC2045Decode2OUT = function (sMatch, sHex) {
+    return String.fromCharCode(parseInt(sHex, 16))
+  };
+  return str.replace(RFC2045Decode1, '')
+    .replace(RFC2045Decode2IN, RFC2045Decode2OUT);
+}
+
 /*
 *
 * Extract EML Header part
@@ -22,47 +42,42 @@ function qDecode(e) {
 *
 */
 function extractHeader(eml) {
-  eml = eml.split(/\n\n/)[0];
-  reg = /([A-Z]{1}[A-Za-z\-\_ \t]{1,20}):(.*)/g;
+  eml = eml.split(/\r?\n\r?\n/)[0];
+  eml = eml.replace(/\r?\n[ \t]/g, " ");  // Fix multiline headers.
+  reg = /([A-Z]{1}[A-Za-z\-\_]*):(.*)/g;
   obj = {}
   while ((array = reg.exec(eml)) !== null) {
     obj[array[1].trim().toLowerCase()] = array[2].trim();
   }
-  // detect filename
+  // Detect filename.
   filename = eml.match(/filename=(.*)/i);
   if (filename) {
-    obj.filename = filename[1].replace(/"|'/g, '');
+    // Cater for filename in UTF-8.
+    // RFC 2231 encoding currently not even detected :-(
+    obj.filename = new TextDecoder("utf-8").decode(stringToTypedArray(filename[1].replace(/"|'/g, "")));
   }
-  Object.keys(obj).map(el => {
-    obj[el] = obj[el].match(/\^%[a-z]*\%$/) ? "" : obj[el];
-  });
+  // What was the following code meant to do?
+  // Object.keys(obj).map(el => {
+  //   obj[el] = obj[el].match(/\^%[a-z]*\%$/) ? "" : obj[el];
+  // });
   return obj;
 };
 
 /*
 *
-* Format Q-encoded String to human Readable
-* Return string
+* Add Attachments on email
 *
 */
-function emlFormatDecode(text) {
-  return text
-          .replace(/\=(\r\r|\n\n|\r\n|\n|\r)/g,'')
-          .replace(QEncodeRegex, qDecode);
-  
-}
+function addAttachment(tabId, attachments) {
+  attachments.map(attachment => {
+    let file, bstr, n, u8arr, tryB64 = true;
 
-/*
-*
-* Add Attachements on email
-*
-*/
-function addAttachment(tabId, attachements) {
-  attachements.map(attachment => {
-    let file = null, bstr, n, u8arr, tryB64 = true;
+    bstr = attachment.body.replace(/( |\n|\t|\r)/g, "");
 
-    bstr = attachment.body.replace(/( |\n|\t|\r)/g, '');
-    for (i=0; i<=2 && tryB64; i++) {
+    // The following code will add missing = at the end of a
+    // base64 encoded string. That shouldn't be necessary
+    // but it also doesn't hurt.
+    for (i = 0; i <= 2 && tryB64; i++) {
       try {
         bstr = atob(bstr); 
         n = bstr.length;
@@ -73,7 +88,7 @@ function addAttachment(tabId, attachements) {
         tryB64 = false;
       } catch (err) {
         bstr += '=';
-        u8arr= bstr;
+        u8arr = bstr;
       }
     }
     file = new File([u8arr], attachment.header.filename, {
@@ -92,10 +107,15 @@ function extractMultipartContent(contents, header) {
   let body, contentType;
   let boundary = header['content-type'].match(/boundary=(.*)/);
   let attachments = [];
-  let bodyParts = contents.split(boundary ? '--' + boundary[1] : /zertyuhgfdfghjgfdfghgf/);
+  let bodyParts;
+  if (boundary) {
+    bodyParts = contents.split("--" + boundary[1]);
+  } else {
+    bodyParts = [contents];
+  }
 
   bodyParts.map(tmpContents => {
-    let tmp = tmpContents.split(/\n\n/);
+    let tmp = tmpContents.split(/\r?\n\r?\n/);
     let tmpHeader = extractHeader(tmp[0]);
     if (!tmpHeader['content-type']) return null;
     tmp.shift();
@@ -104,16 +124,13 @@ function extractMultipartContent(contents, header) {
         tmpHeader['content-disposition'].indexOf('attachment') != -1) {
       return attachments.push({header: tmpHeader, body: tmpBody});
     }
-    
+
+    // It wasn't an attachment, so record this as body with its content type.
     contentType = tmpHeader['content-type'];
     body = tmpBody;
   });
 
-  return {
-    attachements: attachments,
-    body:         body,
-    contentType:  contentType
-  };
+  return { attachments, body, contentType };
 }
 
 /*
@@ -122,29 +139,52 @@ function extractMultipartContent(contents, header) {
 *
 */
 function showFileContent(contents) {
-  let attachments = [], tmp, body = {};
+  let attachments = [];
+  let body = {};
   let header = extractHeader(contents);
-  contents = contents.split(/\n\n/);
+  contents = contents.split(/\r?\n\r?\n/);
   contents.shift();
   contents = contents.join("\n\n");
-  contents = emlFormatDecode(contents).replace(/<\n/g, '<');
-  body.subject = emlFormatDecode(header['subject'])
-                 .replace(/\=\?UTF-8\?Q\?(.*?)\?\=/g, '$1');
-  body.to = header['to'];
-  body.cc = header['cc'];
-  body.bcc = header['bcc'];
+  // Headers can be raw UTF-8, so decode.
+  // Thunderbird will take care of RFC2047 tokens, so just leave them.
+  if (header['subject']) body.subject = new TextDecoder("utf-8").decode(stringToTypedArray(header['subject']));
+  if (header['to']) body.to = new TextDecoder("utf-8").decode(stringToTypedArray(header['to']));
+  if (header['cc']) body.cc = new TextDecoder("utf-8").decode(stringToTypedArray(header['cc']));
+  if (header['bcc']) body.bcc = new TextDecoder("utf-8").decode(stringToTypedArray(header['bcc']));
 
-  // If multipart
-  if (typeof header['content-type'] != 'undefined' &&
-             header['content-type'].match(/multipart.*?boundary/)) {
-    tmp = extractMultipartContent(contents, header);
-    contents = tmp.body;
-    header['content-type'] = tmp.contentType;
-    attachments = tmp.attachements;
+  // For multipart/* with a boundary, extract the attachments.
+  // multipart/alternative or multipart/related aren't treated yet.
+  if (header['content-type'] &&
+      header['content-type'].match(/multipart.*?boundary/)) {
+    let multipart = extractMultipartContent(contents, header);
+    contents = multipart.body;
+    header['content-type'] = multipart.contentType;
+    attachments = multipart.attachments;
   }
 
-  if (typeof header['content-type'] != 'undefined' &&
-             header['content-type'].match(/html/)) {
+  let charset = null;
+  if (header['content-type']) {
+    charset = header['content-type'].replace(/.*charset=([a-z0-9\-\_]*).*/i, "$1");
+  }
+
+  if (header['content-transfer-encoding'] &&
+      header['content-transfer-encoding'].match(/base64/)) {
+    contents = atob(contents.replace(/\r?\n\r?\n/g, ""));
+  }
+  if (header['content-transfer-encoding'] &&
+      header['content-transfer-encoding'].match(/quoted-printable/)) {
+    contents = quoted_printable_decode(contents);
+  }
+
+  if (charset) {
+    let bytes = stringToTypedArray(contents);
+    contents = new TextDecoder(charset).decode(bytes);
+  }
+
+  // XXX TODO: Treat format=flowed.
+
+  if (header['content-type'] &&
+      header['content-type'].match(/html/)) {
     body.body = contents;
     body.isPlainText = false;
   } else {
@@ -152,7 +192,9 @@ function showFileContent(contents) {
     body.isPlainText = true;
   }
 
-  browser.compose.beginNew().then(tab => {
+  // We should be able to go: browser.compose.beginNew(null, body)
+  // But that inserts too many empty lines :-(
+  browser.compose.beginNew(null, { isPlainText: body.isPlainText }).then(tab => {
     browser.compose.setComposeDetails(tab.id, body);
     addAttachment(tab.id, attachments);
  });
@@ -194,7 +236,7 @@ browser.runtime.onMessage.addListener(async message => {
       reader.onload = function(e) {
         showFileContent(e.target.result);
       }
-      reader.readAsText(file);
+      reader.readAsBinaryString(file);
     }
     input.click();
     return;
