@@ -1,13 +1,10 @@
-const EMLHeaderFileTemplate = 
-`X-Unsent: 1
-To: %to%
-Cc: %cc%
-Subject: %subject%
-Content-Type: multipart/mixed; boundary=--boundary_text_string
+const EMLHeaderFileTemplate =
+`Content-Type: multipart/mixed; boundary=--boundary_text_string
+X-Unsent: 1
 MIME-Version: 1.0
 
 ----boundary_text_string
-Content-Type: text/html; charset=UTF-8
+Content-Type: %content_type%; charset=UTF-8
 
 %body%
 
@@ -16,10 +13,10 @@ Content-Type: text/html; charset=UTF-8
 ----boundary_text_string--
 `;
 
-const EMLAttachements = 
+const EMLAttachments =
 `
 ----boundary_text_string
-Content-Type: application/octet-stream;;
+Content-Type: %filetype%;
 Content-Disposition: attachment;
         filename="%filename%"
 Content-Transfer-Encoding: base64
@@ -28,19 +25,26 @@ Content-Transfer-Encoding: base64
 
 `;
 
-function formatEmail(contents, attachements)
+function formatEmail(contents, attachments)
 {
-  let to      = contents.to .length >= 1  ? contents.to.join(', ')  : '',
-      cc      = contents.cc .length >= 1  ? contents.cc.join(', ')  : '',
-      subject = contents.to .length >= 1  ? contents.subject : '',
-      fileContents = EMLHeaderFileTemplate;
-  attachements = attachements ? attachements : "";
-  fileContents  = fileContents.replace(/%to%/,      to);
-  fileContents  = fileContents.replace(/%cc%/,      cc);
-  fileContents  = fileContents.replace(/%subject%/, subject);
-  fileContents  = fileContents.replace(/%body%/,    contents.body);
-
-  fileContents  = fileContents.replace(/%attachments%/,    attachements);
+  console.log(contents);
+  let to      = contents.to.length >= 1 ? contents.to.join(', ')  : '';
+  let cc      = contents.cc.length >= 1 ? contents.cc.join(', ')  : '';
+  let subject = contents.subject.length >= 1 ? contents.subject : '';
+  let fileContents = EMLHeaderFileTemplate;
+  if (contents.to.length >= 1) fileContents = `To: ${contents.to}\n` + fileContents;
+  if (contents.cc.length >= 1) fileContents = `Cc: ${contents.cc}\n` + fileContents;
+  if (contents.bcc.length >= 1) fileContents = `Bcc: ${contents.bcc}\n` + fileContents;
+  if (contents.subject) fileContents = `Subject: ${contents.subject}\n` + fileContents;
+  if (contents.isPlainText) {
+    fileContents = fileContents.replace(/%content_type%/, "text/plain");
+    fileContents = fileContents.replace(/%body%/, contents.plainTextBody);
+  } else {
+    fileContents = fileContents.replace(/%content_type%/, "text/html");
+    fileContents = fileContents.replace(/%body%/, contents.body);
+  }
+  attachments = attachments ? attachments : "";
+  fileContents  = fileContents.replace(/%attachments%/, attachments);
   return fileContents;
 }
 
@@ -52,11 +56,11 @@ async function getFileAttachementsDatas(file)
     return new Promise((res2) => {
       reader  = new FileReader();
       reader.addEventListener("load", function () {
-        let result = this.result,
-            fileType = result ? result.match(/data:(.*?);base64/) : null;
+        let result = this.result;
+        let fileType = result ? result.match(/data:(.*?);base64/) : null;
         res2({
             filename: file.name,
-            type : fileType ? fileType[1] : "text/html",
+            type : fileType ? fileType[1] : "application/octet-stream",
             contents: !result || result.indexOf(',') == -1 ? "error": result.split(',')[1]
           });
       }, false);
@@ -65,6 +69,16 @@ async function getFileAttachementsDatas(file)
   })(nfile);
 }
 
+function chunkSubstr(str, size) {
+  const numChunks = Math.ceil(str.length / size);
+  const chunks = new Array(numChunks);
+
+  for (let i = 0, o = 0; i < numChunks; ++i, o += size) {
+    chunks[i] = str.substr(o, size);
+  }
+
+  return chunks.join("\n");
+}
 
 function formatAttachements(mailerCommon)
 {
@@ -75,8 +89,8 @@ function formatAttachements(mailerCommon)
     res(files.map(file => {
       let filename     = file.filename,
           filetype     = file.type,
-          binary_data  = file.contents,
-          fileContents = EMLAttachements;
+          binary_data  = chunkSubstr(file.contents, 72),
+          fileContents = EMLAttachments;
 
       fileContents  = fileContents.replace(/%filename%/,     filename);
       fileContents  = fileContents.replace(/%filetype%/,     filetype);
