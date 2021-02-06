@@ -30,8 +30,8 @@ function extractHeader(eml)
   while ((array = reg.exec(eml)) !== null) {
     obj[array[1].trim().toLowerCase()] = array[2].trim();
   }
-  //detect filename 
-  filename = eml.match(/fIlename=(.*)/i);
+  // detect filename
+  filename = eml.match(/filename=(.*)/i);
   if (filename) {
     obj.filename = filename[1].replace(/"|'/g, '');
   }
@@ -57,7 +57,6 @@ function emlFormatDecode(text)
 
 /*
 *
-*
 * Add Attachements on email
 *
 */
@@ -74,7 +73,7 @@ function addAttachment(tabId, attachements)
         n = bstr.length;
         u8arr = new Uint8Array(n);
         while(n--){
-            u8arr[n] = bstr.charCodeAt(n);
+          u8arr[n] = bstr.charCodeAt(n);
         }
         tryB64 = false;
       } catch (err) {
@@ -91,34 +90,35 @@ function addAttachment(tabId, attachements)
 
 /*
 *
-*
-* Extrat all parts from email (main contents, attachments, ....)
+* Extract all parts from email (main contents, attachments, ....)
 *
 */
 function extractMultipartContent(contents, header) {
-  let body, contentType, boundary = header['content-type'].match(/boundary=(.*)/), 
-        attachments = [],
-        bodyParts = contents.split(boundary ? '--'+boundary[1] : /zertyuhgfdfghjgfdfghgf/);
-        bodyParts.map( tmpContents  => {
-          let tmp = tmpContents.split(/\n\n/),
-              tmpHeader = extractHeader(tmp[0]);
-        if (!tmpHeader['content-type']) return null;
-          tmp.shift();
-          tmpBody = tmp.join("\n\n");
-          if (tmpHeader['content-disposition'] && 
-              tmpHeader['content-disposition'].indexOf('attachment') != -1) {
-                return attachments.push({header: tmpHeader, body: tmpBody});
-          }
-            
-            contentType = tmpHeader['content-type'];
-            body = tmpBody;
-        });
-      return {
-          attachements  : attachments,
-          body          : body,
-          contentType   : contentType
+  let body, contentType;
+  let boundary = header['content-type'].match(/boundary=(.*)/);
+  let attachments = [];
+  let bodyParts = contents.split(boundary ? '--' + boundary[1] : /zertyuhgfdfghjgfdfghgf/);
 
-      };
+  bodyParts.map(tmpContents => {
+    let tmp = tmpContents.split(/\n\n/);
+    let tmpHeader = extractHeader(tmp[0]);
+    if (!tmpHeader['content-type']) return null;
+    tmp.shift();
+    tmpBody = tmp.join("\n\n");
+    if (tmpHeader['content-disposition'] && 
+        tmpHeader['content-disposition'].indexOf('attachment') != -1) {
+      return attachments.push({header: tmpHeader, body: tmpBody});
+    }
+    
+    contentType = tmpHeader['content-type'];
+    body = tmpBody;
+  });
+
+  return {
+    attachements: attachments,
+    body:         body,
+    contentType:  contentType
+  };
 }
 
 /*
@@ -129,14 +129,15 @@ function extractMultipartContent(contents, header) {
 function showFileContent(contents)
 {
   let attachments = [], tmp, body = {};
-      header   = extractHeader(contents);
+  let header = extractHeader(contents);
   contents = contents.split(/\n\n/);
   contents.shift();
   contents = contents.join("\n\n");
   contents = emlFormatDecode(contents).replace(/<\n/g, '<');
-  body.subject =  emlFormatDecode(header['subject'])
-                  .replace(/\=\?UTF-8\?Q\?(.*?)\?\=/g, '$1');
-  body.to = header['to']
+  body.subject = emlFormatDecode(header['subject'])
+                 .replace(/\=\?UTF-8\?Q\?(.*?)\?\=/g, '$1');
+  body.to = header['to'];
+
   // If multipart
   if (typeof header['content-type'] != 'undefined' &&
              header['content-type'].match(/multipart.*?boundary/)) {
@@ -145,21 +146,19 @@ function showFileContent(contents)
     header['content-type'] = tmp.contentType;
     attachments = tmp.attachements;
   }
+
   if (typeof header['content-type'] != 'undefined' &&
-             header['content-type'].match(/html/))
-  {
+             header['content-type'].match(/html/)) {
     body.body = contents;
     body.isPlainText = false;
-  }
-  else
-  {
+  } else {
     body.plainTextBody = contents;
     body.isPlainText = true;
   }
+
   browser.compose.beginNew().then(tab => {
     browser.compose.setComposeDetails(tab.id, body);
-      addAttachment(tab.id, attachments);
-
+    addAttachment(tab.id, attachments);
  });
 }
 
@@ -182,8 +181,8 @@ function saveEMLFile(contents)
 
 /*
 *
-* Wait for EML file ...
-* to open or to save
+* Wait for EML file to open or to save
+*
 */
 browser.runtime.onMessage.addListener(async message => {
   if (message.message.save_file){
