@@ -131,6 +131,8 @@ function showFileContent(contents) {
   body.subject = emlFormatDecode(header['subject'])
                  .replace(/\=\?UTF-8\?Q\?(.*?)\?\=/g, '$1');
   body.to = header['to'];
+  body.cc = header['cc'];
+  body.bcc = header['bcc'];
 
   // If multipart
   if (typeof header['content-type'] != 'undefined' &&
