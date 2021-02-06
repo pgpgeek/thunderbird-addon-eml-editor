@@ -7,6 +7,10 @@ function stringToTypedArray(buffer) {
   return typedarray;
 }
 
+function rawUTF8toJS (s) {
+  return new TextDecoder("utf-8").decode(stringToTypedArray(s));
+}
+
 function quoted_printable_decode(str) { // eslint-disable-line camelcase
   if (!str) return str;
   //       discuss at: https://locutus.io/php/quoted_printable_decode/
@@ -54,7 +58,7 @@ function extractHeader(eml) {
   if (filename) {
     // Cater for filename in UTF-8.
     // RFC 2231 encoding currently not even detected :-(
-    obj.filename = new TextDecoder("utf-8").decode(stringToTypedArray(filename[1].replace(/"|'/g, "")));
+    obj.filename = rawUTF8toJS(filename[1].replace(/"|'/g, ""));
   }
   // What was the following code meant to do?
   // Object.keys(obj).map(el => {
@@ -147,10 +151,10 @@ function showFileContent(contents) {
   contents = contents.join("\n\n");
   // Headers can be raw UTF-8, so decode.
   // Thunderbird will take care of RFC2047 tokens, so just leave them.
-  if (header['subject']) body.subject = new TextDecoder("utf-8").decode(stringToTypedArray(header['subject']));
-  if (header['to']) body.to = new TextDecoder("utf-8").decode(stringToTypedArray(header['to']));
-  if (header['cc']) body.cc = new TextDecoder("utf-8").decode(stringToTypedArray(header['cc']));
-  if (header['bcc']) body.bcc = new TextDecoder("utf-8").decode(stringToTypedArray(header['bcc']));
+  if (header['subject']) body.subject = rawUTF8toJS(header['subject']);
+  if (header['to']) body.to = rawUTF8toJS(header['to']);
+  if (header['cc']) body.cc = rawUTF8toJS(header['cc']);
+  if (header['bcc']) body.bcc = rawUTF8toJS(header['bcc']);
 
   // For multipart/* with a boundary, extract the attachments.
   // multipart/alternative or multipart/related aren't treated yet.
