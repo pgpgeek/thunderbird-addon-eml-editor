@@ -10,6 +10,20 @@
             "strict_min_version": "78.0"
         }
     },
+    "experiment_apis": {
+        "EmlEditor": {
+            "schema": "scripts/schema.json",
+            "parent": {
+              "scopes": [
+                  "addon_parent"
+              ],
+              "paths": [
+                  ["EmlEditor"]
+              ],
+              "script": "scripts/experiments.js"
+          }
+        }
+    },
     "browser_action": {
         "default_popup": "views/popup.html",
         "default_title": "EML-Editor",

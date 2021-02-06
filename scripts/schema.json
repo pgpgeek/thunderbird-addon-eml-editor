@@ -1,0 +1,21 @@
+[
+  {
+    "namespace": "EmlEditor",
+    "functions": [
+      {
+        "name": "getFrom",
+        "type": "function",
+        "description": "Retrieves 'from' from nsIMsgCompFields",
+        "async": true,
+        "parameters": []
+      },
+      {
+        "name": "getPrio",
+        "type": "function",
+        "description": "Retrieves 'priority' from nsIMsgCompFields",
+        "async": true,
+        "parameters": []
+      }
+    ]
+  }
+]

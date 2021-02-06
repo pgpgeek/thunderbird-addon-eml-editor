@@ -27,7 +27,6 @@ Content-Transfer-Encoding: base64
 
 function formatEmail(contents, attachments)
 {
-  console.log(contents);
   let to      = contents.to.length >= 1 ? contents.to.join(', ')  : '';
   let cc      = contents.cc.length >= 1 ? contents.cc.join(', ')  : '';
   let subject = contents.subject.length >= 1 ? contents.subject : '';
@@ -36,6 +35,8 @@ function formatEmail(contents, attachments)
   if (contents.cc.length >= 1) fileContents = `Cc: ${contents.cc}\n` + fileContents;
   if (contents.bcc.length >= 1) fileContents = `Bcc: ${contents.bcc}\n` + fileContents;
   if (contents.subject) fileContents = `Subject: ${contents.subject}\n` + fileContents;
+  if (contents.from) fileContents = `From: ${contents.from}\n` + fileContents;
+  if (contents.priority) fileContents = `X-Priority: ${contents.priority}\n` + fileContents;
   if (contents.isPlainText) {
     fileContents = fileContents.replace(/%content_type%/, "text/plain");
     fileContents = fileContents.replace(/%body%/, contents.plainTextBody);
@@ -104,10 +105,11 @@ function formatAttachements(mailerCommon)
 
 mailerCommon = new ComposeManager();
 mailerCommon.getTextCompose().then(async (email) => {
-  let message = null,
-      attachements = null;
-  attachements = await formatAttachements(mailerCommon);
-  message = message = formatEmail(email, attachements);
+  let message = null;
+  let attachments = null;
+  attachments = await formatAttachements(mailerCommon);
+  email.from = await browser.EmlEditor.getFrom();
+  email.priority = await browser.EmlEditor.getPrio();
+  message = formatEmail(email, attachments);
   mailerCommon.saveEMLFile(message);
-
 });
