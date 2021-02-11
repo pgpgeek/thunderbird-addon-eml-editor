@@ -34,8 +34,8 @@ var EmlEditor = class extends ExtensionCommon.ExtensionAPI {
               return;
             }
 
-            let stream = Components.classes["@mozilla.org/network/file-input-stream;1"]
-                                            .createInstance(Ci.nsIFileInputStream);
+            let stream = Cc["@mozilla.org/network/file-input-stream;1"]
+                           .createInstance(Ci.nsIFileInputStream);
             stream.init(fp.file, -1, 0, 0);
             let sis = Cc["@mozilla.org/scriptableinputstream;1"].createInstance(
               Ci.nsIScriptableInputStream
