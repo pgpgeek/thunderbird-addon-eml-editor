@@ -15,6 +15,13 @@
         "description": "Retrieves 'priority' from nsIMsgCompFields",
         "async": true,
         "parameters": []
+      },
+      {
+        "name": "openEML",
+        "type": "function",
+        "description": "Launch a file picker and pick .eml file to open in a new compose window",
+        "async": false,
+        "parameters": []
       }
     ]
   }
